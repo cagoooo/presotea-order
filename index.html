@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>鮮茶道團購點單｜民雄中正店</title>
+  <meta name="description" content="鮮茶道嘉義民雄中正店線上團購點單：填名字、勾選飲料、選甜度冰塊，一鍵送出。">
+  <meta property="og:title" content="鮮茶道團購點單｜民雄中正店">
+  <meta property="og:description" content="填名字、勾選飲料、選甜度冰塊，一鍵送出。">
+  <meta name="theme-color" content="#2f7d4a">
+  <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+  <header class="hero">
+    <div class="wrap">
+      <div class="hero-top">
+        <div class="brand">
+          <img src="assets/icon.svg" alt="">
+          <div><strong>鮮茶道團購點單</strong><span>嘉義民雄中正店・中南部菜單</span></div>
+        </div>
+        <a class="hero-link" href="admin.html">🔐 後台整理</a>
+      </div>
+      <h1 id="title">一起訂飲料囉！</h1>
+      <p id="note">填上名字、勾選想喝的飲料，選好甜度冰塊就可以送出。</p>
+      <div class="hero-meta">
+        <span class="chip" id="status">⏳ 讀取中…</span>
+        <span class="chip hidden" id="deadline"></span>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <div class="notice hidden" id="closedNotice">⛔ 這次點單已經截止，目前無法送出，有問題請找負責收單的老師。</div>
+
+    <section class="card">
+      <h2><span class="step">1</span>你的名字</h2>
+      <div class="field">
+        <label for="name" class="sr-only">名字</label>
+        <input id="name" class="input" maxlength="30" autocomplete="name" placeholder="例如：王小明">
+        <p class="hint">請填真實姓名，方便發飲料與收錢；名字會記在這台裝置，下次不用重打。</p>
+      </div>
+    </section>
+
+    <section class="card" id="menuCard">
+      <h2><span class="step">2</span>勾選飲料</h2>
+      <p class="hint" style="margin-top:-6px">打勾後選甜度、冰塊；同一款想要不同口味，按「＋ 再一杯不同口味」。🔥 可做熱飲・👍 熱賣推薦</p>
+      <div class="toolbar">
+        <div class="search"><input id="search" class="input" type="search" placeholder="搜尋飲料，例如：奶茶、冬瓜、檸檬"></div>
+        <nav class="cats" id="cats" aria-label="飲料分類"></nav>
+      </div>
+      <div id="menu"></div>
+    </section>
+
+    <section class="card">
+      <h2><span class="step">3</span>備註（可不填）</h2>
+      <textarea id="orderNote" class="input" rows="2" maxlength="200" placeholder="例如：幫我跟小美的放一起、晚點到"></textarea>
+    </section>
+
+    <section class="card hidden" id="successCard">
+      <div class="success">
+        <div class="big">🎉</div>
+        <h2>送出成功！</h2>
+        <p id="successText"></p>
+        <button class="btn" id="againBtn">再幫別人點一份</button>
+      </div>
+    </section>
+
+    <section class="card hidden" id="mineCard">
+      <h2>🧾 這台裝置送出的訂單</h2>
+      <ul class="sum-list mine" id="mineList"></ul>
+      <p class="hint">點錯了？可以先取消，再重新點一份。</p>
+    </section>
+  </main>
+
+  <div class="cartbar">
+    <div class="wrap">
+      <div class="cart-sum">
+        <strong id="cartCount">還沒選飲料</strong>
+        <div id="cartText">勾選上方菜單開始點餐</div>
+      </div>
+      <button class="btn" id="submitBtn" disabled>確認送出</button>
+    </div>
+  </div>
+
+  <dialog id="confirmDlg">
+    <div class="dlg-head">確認訂單</div>
+    <div class="dlg-body">
+      <p style="margin:0 0 6px">訂購人：<strong id="cName"></strong></p>
+      <ul class="sum-list" id="cList"></ul>
+      <div class="sum-total"><span>合計</span><span id="cTotal"></span></div>
+      <p class="hint">價格依中南部菜單試算，實際以店家結帳為準。</p>
+    </div>
+    <div class="dlg-foot">
+      <button class="btn ghost" id="cBack">返回修改</button>
+      <button class="btn" id="cSend">送出訂單</button>
+    </div>
+  </dialog>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <footer class="site-footer">
+    <div class="wrap footer-inner">
+      <div class="footer-brand">
+        <img src="assets/icon.svg" alt="" width="48" height="48">
+        <div><strong>鮮茶道團購點單</strong><span>大家線上勾選，負責人在後台一次整理好，打電話訂飲料不再手忙腳亂。</span></div>
+      </div>
+      <ul class="footer-points">
+        <li><span class="fp-icon">📋</span><div><strong>菜單依中南部版</strong><small>適用嘉義地區，品項價格以門市為準</small></div></li>
+        <li><span class="fp-icon">🔒</span><div><strong>只有負責人看得到</strong><small>訂單只存名字與飲料，後台需登入</small></div></li>
+        <li><span class="fp-icon">↩️</span><div><strong>點錯可以取消</strong><small>同一台裝置可取消自己送出的訂單</small></div></li>
+      </ul>
+      <nav class="footer-links" aria-label="快速連結">
+        <a class="footer-link" href="#menuCard">🧋 看菜單</a>
+        <a class="footer-link" href="admin.html">🔐 後台整理</a>
+      </nav>
+    </div>
+    <div class="wrap footer-bottom">
+      <p class="site-credit">Made with <span class="site-credit__heart" aria-label="愛心">❤️</span> by
+        <a href="https://www.smes.tyc.edu.tw/modules/school/index.php?department_id=2&zone_id=0&page_id=2&content_id=11&type=news&from_op=all_news#a5" target="_blank" rel="noopener noreferrer" class="site-credit__author">阿凱老師</a>
+        <span class="footer-school"><span class="footer-dot" aria-hidden="true">・</span>桃園市龍潭區石門國民小學</span></p>
+      <p class="version-tag" id="ver">v1.0.0</p>
+    </div>
+  </footer>
+
+  <script type="module" src="assets/app.js"></script>
+</body>
+</html>
