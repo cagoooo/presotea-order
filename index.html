@@ -3,9 +3,9 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>鮮茶道團購點單｜民雄中正店</title>
-  <meta name="description" content="鮮茶道嘉義民雄中正店線上團購點單：填名字、勾選飲料、選甜度冰塊，一鍵送出。">
-  <meta property="og:title" content="鮮茶道團購點單｜民雄中正店">
+  <title>飲料團購點單｜鮮茶道・茶湯會</title>
+  <meta name="description" content="鮮茶道、茶湯會線上團購點單：填名字、勾選飲料、選甜度冰塊，一鍵送出。">
+  <meta property="og:title" content="飲料團購點單｜鮮茶道・茶湯會">
   <meta property="og:description" content="填名字、勾選飲料、選甜度冰塊，一鍵送出。">
   <meta name="theme-color" content="#2f7d4a">
   <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
@@ -20,7 +20,7 @@
       <div class="hero-top">
         <div class="brand">
           <img src="assets/icon.svg" alt="">
-          <div><strong>鮮茶道團購點單</strong><span>嘉義民雄中正店・中南部菜單</span></div>
+          <div><strong id="brandName">鮮茶道團購點單</strong><span id="brandSub">嘉義民雄中正店・中南部菜單</span></div>
         </div>
         <a class="hero-link" href="admin.html">🔐 後台整理</a>
       </div>
@@ -47,7 +47,11 @@
 
     <section class="card" id="menuCard">
       <h2><span class="step">2</span>勾選飲料</h2>
-      <p class="hint" style="margin-top:-6px">打勾後選甜度、冰塊；同一款想要不同口味，按「＋ 再一杯不同口味」。🔥 可做熱飲・👍 熱賣推薦</p>
+      <div class="shop-switch hidden" id="shopSwitch" role="group" aria-label="選擇店家">
+        <button type="button" class="shop-btn" data-shop="presotea">🍃 鮮茶道</button>
+        <button type="button" class="shop-btn" data-shop="tptea">🍵 茶湯會</button>
+      </div>
+      <p class="hint" id="legend" style="margin-top:-6px"></p>
       <div class="toolbar">
         <div class="search"><input id="search" class="input" type="search" placeholder="搜尋飲料，例如：奶茶、冬瓜、檸檬"></div>
         <nav class="cats" id="cats" aria-label="飲料分類"></nav>
@@ -89,10 +93,10 @@
   <dialog id="confirmDlg">
     <div class="dlg-head">確認訂單</div>
     <div class="dlg-body">
-      <p style="margin:0 0 6px">訂購人：<strong id="cName"></strong></p>
+      <p style="margin:0 0 6px">訂購人：<strong id="cName"></strong>・店家：<strong id="cShop"></strong></p>
       <ul class="sum-list" id="cList"></ul>
       <div class="sum-total"><span>合計</span><span id="cTotal"></span></div>
-      <p class="hint">價格依中南部菜單試算，實際以店家結帳為準。</p>
+      <p class="hint">價格依官方區域菜單試算，實際以店家結帳為準。</p>
     </div>
     <div class="dlg-foot">
       <button class="btn ghost" id="cBack">返回修改</button>
@@ -106,10 +110,10 @@
     <div class="wrap footer-inner">
       <div class="footer-brand">
         <img src="assets/icon.svg" alt="" width="48" height="48">
-        <div><strong>鮮茶道團購點單</strong><span>大家線上勾選，負責人在後台一次整理好，打電話訂飲料不再手忙腳亂。</span></div>
+        <div><strong>飲料團購點單</strong><span>鮮茶道、茶湯會都能點。大家線上勾選，負責人在後台一次整理好，打電話訂飲料不再手忙腳亂。</span></div>
       </div>
       <ul class="footer-points">
-        <li><span class="fp-icon">📋</span><div><strong>菜單依中南部版</strong><small>適用嘉義地區，品項價格以門市為準</small></div></li>
+        <li><span class="fp-icon">📋</span><div><strong>菜單依官方區域版</strong><small>適用嘉義地區，品項價格以門市為準</small></div></li>
         <li><span class="fp-icon">🔒</span><div><strong>只有負責人看得到</strong><small>訂單只存名字與飲料，後台需登入</small></div></li>
         <li><span class="fp-icon">↩️</span><div><strong>點錯可以取消</strong><small>同一台裝置可取消自己送出的訂單</small></div></li>
       </ul>
@@ -122,7 +126,7 @@
       <p class="site-credit">Made with <span class="site-credit__heart" aria-label="愛心">❤️</span> by
         <a href="https://www.smes.tyc.edu.tw/modules/school/index.php?department_id=2&zone_id=0&page_id=2&content_id=11&type=news&from_op=all_news#a5" target="_blank" rel="noopener noreferrer" class="site-credit__author">阿凱老師</a>
         <span class="footer-school"><span class="footer-dot" aria-hidden="true">・</span>桃園市龍潭區石門國民小學</span></p>
-      <p class="version-tag" id="ver">v1.0.0</p>
+      <p class="version-tag" id="ver">v1.1.0</p>
     </div>
   </footer>
 

@@ -1,5 +1,5 @@
 import { firebaseConfig, SDK, VERSION } from './config.js';
-import { MENU, ALL_ITEMS, SUGAR, ICE, HOT_ICE, TOPPINGS, inSeason, seasonLabel, toppingPrice, specText } from './menu.js';
+import { SHOPS, ITEM_BY_ID, available, availLabel, toppingPrice, specText, shopTitle } from './shops.js';
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -11,23 +11,59 @@ const store = {
 $('#ver').textContent = VERSION;
 
 // ---------- 狀態 ----------
-let cups = [];           // 每一杯（或同口味多杯）的設定
+let cups = [];            // 每一杯（或同口味多杯）的設定
 let isOpen = true;
+let shopMode = 'presotea'; // presotea | tptea | both（由後台設定）
+let shopId = store.get('presotea-shop', 'presotea');
+let branches = {};
+let pageTitle = '';
 let seq = 0;
-const byId = Object.fromEntries(ALL_ITEMS.map((it) => [it.id, it]));
+const shop = () => SHOPS[shopId];
 
 const nameInput = $('#name');
 nameInput.value = store.get('presotea-name', '');
 
+// ---------- 店家切換與主題 ----------
+function applyShop() {
+  const s = shop();
+  const root = document.documentElement.style;
+  root.setProperty('--brand', s.theme.brand);
+  root.setProperty('--brand-2', s.theme.brand2);
+  root.setProperty('--brand-soft', s.theme.soft);
+  document.querySelector('.hero').style.background = s.theme.grad;
+  document.querySelector('meta[name="theme-color"]').content = s.theme.brand;
+  $('#brandName').textContent = `${s.brand}團購點單`;
+  document.title = `${pageTitle ? pageTitle + '｜' : ''}${s.brand}團購點單`;
+  $('#brandSub').textContent = `${shopTitle(shopId, branches)}・${s.menuNote}`;
+  $('#legend').textContent = `打勾後選甜度、冰塊；同一款想要不同口味，按「＋ 再一杯不同口味」。${s.legend}`;
+  $('#shopSwitch').classList.toggle('hidden', shopMode !== 'both');
+  document.querySelectorAll('[data-shop]').forEach((b) => {
+    b.classList.toggle('active', b.dataset.shop === shopId);
+    b.setAttribute('aria-pressed', b.dataset.shop === shopId);
+  });
+  renderCats(); renderMenu(); renderCart();
+}
+
+$('#shopSwitch').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-shop]');
+  if (!b || b.dataset.shop === shopId) return;
+  if (cups.length && !confirm(`切換到「${SHOPS[b.dataset.shop].brand}」會清掉目前勾選的 ${cups.length} 項飲料，確定嗎？`)) return;
+  cups = [];
+  shopId = b.dataset.shop;
+  store.set('presotea-shop', shopId);
+  $('#search').value = '';
+  applyShop();
+});
+
 // ---------- 菜單 ----------
 function renderCats() {
-  $('#cats').innerHTML = MENU.map((c, i) =>
+  $('#cats').innerHTML = shop().cats.map((c, i) =>
     `<button class="cat-btn${i === 0 ? ' active' : ''}" data-cat="${c.id}">${esc(c.name)}</button>`).join('');
 }
 
 function unitPrice(c) {
-  const it = byId[c.itemId];
-  return (c.size === '瓶' ? it.bottle : it.price) + toppingPrice(c.toppings);
+  const it = ITEM_BY_ID[c.itemId];
+  return (c.size === '瓶' ? it.bottle : it.price) + toppingPrice(shop(), c.toppings);
 }
 
 function pills(group, cupId, options, selected, { disabled = [], multi = false, need = false } = {}) {
@@ -40,16 +76,19 @@ function pills(group, cupId, options, selected, { disabled = [], multi = false, 
 }
 
 function cupHTML(c, idx, total) {
-  const it = byId[c.itemId];
-  const iceOpts = it.fixedIce ? ['冰沙（固定）'] : ICE;
-  const iceDisabled = it.hot ? [] : HOT_ICE;
+  const s = shop();
+  const it = ITEM_BY_ID[c.itemId];
+  const iceOpts = it.fixedIce ? ['冰沙（固定）'] : s.ice;
+  const iceDisabled = it.hot ? [] : s.hotIce;
+  const sizes = s.sizes(it);
   return `<div class="cup" data-cupbox="${c.uid}">
     <div class="cup-label"><span>${total > 1 ? `第 ${idx + 1} 種口味` : '口味設定'}・$${unitPrice(c)}／杯</span>
       ${total > 1 ? `<button type="button" class="link-btn danger" data-act="del" data-cup="${c.uid}">移除</button>` : ''}</div>
-    ${it.bottle ? `<div class="opt-row"><span>容量</span><div class="pills">${pills('size', c.uid, ['L', '瓶'], c.size)}</div></div>` : ''}
-    <div class="opt-row"><span>甜度</span><div class="pills">${pills('sugar', c.uid, SUGAR, c.sugar, { need: c.showNeed })}</div></div>
+    ${it.variants ? `<div class="opt-row"><span>口味</span><div class="pills">${pills('variant', c.uid, it.variants, c.variant)}</div></div>` : ''}
+    ${sizes ? `<div class="opt-row"><span>容量</span><div class="pills">${pills('size', c.uid, sizes, c.size)}</div></div>` : ''}
+    <div class="opt-row"><span>甜度</span><div class="pills">${pills('sugar', c.uid, s.sugar, c.sugar, { need: c.showNeed })}</div></div>
     <div class="opt-row"><span>冰塊</span><div class="pills">${pills('ice', c.uid, iceOpts, c.ice, { disabled: iceDisabled, need: c.showNeed })}</div></div>
-    <div class="opt-row"><span>加料</span><div class="pills">${pills('top', c.uid, TOPPINGS, c.toppings, { multi: true })}</div></div>
+    <div class="opt-row"><span>加料</span><div class="pills">${pills('top', c.uid, s.toppings, c.toppings, { multi: true })}</div></div>
     <div class="opt-row"><span>杯數</span><div class="qty"><button type="button" data-act="minus" data-cup="${c.uid}" aria-label="少一杯">－</button><output>${c.qty}</output><button type="button" data-act="plus" data-cup="${c.uid}" aria-label="多一杯">＋</button></div></div>
     <div class="opt-row"><span>備註</span><input class="small-input" maxlength="40" data-act="note" data-cup="${c.uid}" value="${esc(c.note)}" placeholder="可不填"></div>
   </div>`;
@@ -57,10 +96,10 @@ function cupHTML(c, idx, total) {
 
 function drinkHTML(it) {
   const mine = cups.filter((c) => c.itemId === it.id);
-  const ok = inSeason(it);
+  const ok = available(it);
   const on = mine.length > 0;
-  const tags = `${it.hot ? '<span class="tag" title="可做熱飲">🔥</span>' : ''}${it.rec ? '<span class="tag" title="熱賣推薦">👍</span>' : ''}`;
-  const sub = [!ok ? `非供應期間（${seasonLabel(it)}）` : seasonLabel(it), it.fixedIce ? '冰沙無法調冰' : ''].filter(Boolean).join('・');
+  const tags = `${it.hot ? '<span class="tag" title="可做熱飲">🔥</span>' : ''}${it.rec ? '<span class="tag" title="推薦">👍</span>' : ''}`;
+  const sub = [it.sub, it.variants && it.variants[1] === '珍珠' ? '可選珍珠版（同價）' : '', !ok ? `尚未供應（${availLabel(it)}）` : availLabel(it), it.fixedIce ? '冰沙無法調冰' : ''].filter(Boolean).join('・');
   return `<div class="drink${on ? ' on' : ''}${ok ? '' : ' off'}" data-item="${it.id}">
     <div class="drink-head" role="checkbox" aria-checked="${on}" tabindex="${ok ? 0 : -1}" data-act="toggle" data-id="${it.id}">
       <span class="check"></span>
@@ -74,37 +113,38 @@ function drinkHTML(it) {
 
 function renderMenu() {
   const q = $('#search').value.trim();
-  $('#menu').innerHTML = MENU.map((cat) => {
+  $('#menu').innerHTML = shop().cats.map((cat) => {
     const items = cat.items.filter((it) => !q || it.name.includes(q) || cat.name.includes(q));
     if (!items.length) return '';
     return `<section class="cat-section" id="cat-${cat.id}">
-      <div class="cat-title" style="background:${cat.color}">${esc(cat.name)}<small>${esc(cat.note || 'L 杯')}</small></div>
+      <div class="cat-title" style="background:${cat.color}">${esc(cat.name)}<small>${esc(cat.note || '')}</small></div>
       <div class="items">${items.map(drinkHTML).join('')}</div></section>`;
   }).join('') || '<p class="hint">找不到符合的飲料，換個關鍵字試試。</p>';
 }
 
 function rerenderDrink(itemId) {
-  const el = document.querySelector(`[data-item="${itemId}"]`);
-  if (el) el.outerHTML = drinkHTML(byId[itemId]);
+  const el = document.querySelector(`[data-item="${CSS.escape(itemId)}"]`);
+  if (el) el.outerHTML = drinkHTML(ITEM_BY_ID[itemId]);
   renderCart();
 }
 
 function newCup(itemId) {
-  const it = byId[itemId];
-  return { uid: `c${++seq}`, itemId, size: 'L', sugar: '', ice: it.fixedIce ? '冰沙（固定）' : '', toppings: [], qty: 1, note: '' };
+  const it = ITEM_BY_ID[itemId];
+  return { uid: `c${++seq}`, itemId, size: shop().defaultSize, variant: it.variants ? it.variants[0] : '', sugar: '', ice: it.fixedIce ? '冰沙（固定）' : '', toppings: [], qty: 1, note: '' };
 }
 
 // ---------- 購物車 ----------
 function totals() {
-  const cupsN = cups.reduce((s, c) => s + c.qty, 0);
-  const price = cups.reduce((s, c) => s + unitPrice(c) * c.qty, 0);
-  return { cupsN, price };
+  return {
+    cupsN: cups.reduce((s, c) => s + c.qty, 0),
+    price: cups.reduce((s, c) => s + unitPrice(c) * c.qty, 0),
+  };
 }
 
 function renderCart() {
   const { cupsN, price } = totals();
   $('#cartCount').textContent = cupsN ? `${cupsN} 杯・$${price}` : '還沒選飲料';
-  $('#cartText').textContent = cupsN ? cups.map((c) => `${byId[c.itemId].name}×${c.qty}`).join('、') : '勾選上方菜單開始點餐';
+  $('#cartText').textContent = cupsN ? `${shop().brand}：` + cups.map((c) => `${ITEM_BY_ID[c.itemId].name}×${c.qty}`).join('、') : `目前店家：${shop().brand}，勾選上方菜單開始點餐`;
   $('#submitBtn').disabled = !cupsN || !isOpen;
 }
 
@@ -114,7 +154,7 @@ $('#menu').addEventListener('click', (e) => {
   const act = t.dataset.act;
   if (act === 'toggle') {
     const id = t.dataset.id;
-    if (!inSeason(byId[id])) return toast('這款目前不在供應期間');
+    if (!available(ITEM_BY_ID[id])) return toast('這款目前還沒有供應');
     if (cups.some((c) => c.itemId === id)) cups = cups.filter((c) => c.itemId !== id);
     else cups.push(newCup(id));
     return rerenderDrink(id);
@@ -123,6 +163,7 @@ $('#menu').addEventListener('click', (e) => {
   const c = cups.find((x) => x.uid === t.dataset.cup);
   if (!c) return;
   const v = t.dataset.val;
+  if (act === 'variant') c.variant = v;
   if (act === 'size') c.size = v;
   if (act === 'sugar') c.sugar = v;
   if (act === 'ice') c.ice = v;
@@ -155,8 +196,7 @@ nameInput.addEventListener('input', () => nameInput.classList.remove('err'));
 
 // ---------- 送出 ----------
 function validate() {
-  const name = nameInput.value.trim();
-  if (!name) {
+  if (!nameInput.value.trim()) {
     nameInput.classList.add('err');
     nameInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
     nameInput.focus({ preventScroll: true });
@@ -174,13 +214,15 @@ function validate() {
   return true;
 }
 
+const lineSpec = (c) => specText({ ...c, sizeLabel: shop().sizeOf(c) }, shopId);
+
 $('#submitBtn').addEventListener('click', () => {
   if (!isOpen) return toast('點單已截止');
   if (!validate()) return;
-  const { price } = totals();
   $('#cName').textContent = nameInput.value.trim();
-  $('#cList').innerHTML = cups.map((c) => `<li><div>${esc(byId[c.itemId].name)} × ${c.qty}<small>${esc(specText(c))}${c.note ? `・${esc(c.note)}` : ''}</small></div><strong>$${unitPrice(c) * c.qty}</strong></li>`).join('');
-  $('#cTotal').textContent = `$${price}`;
+  $('#cShop').textContent = shopTitle(shopId, branches);
+  $('#cList').innerHTML = cups.map((c) => `<li><div>${esc(ITEM_BY_ID[c.itemId].name)} × ${c.qty}<small>${esc(lineSpec(c))}${c.note ? `・${esc(c.note)}` : ''}</small></div><strong>$${unitPrice(c) * c.qty}</strong></li>`).join('');
+  $('#cTotal').textContent = `$${totals().price}`;
   $('#confirmDlg').showModal();
 });
 $('#cBack').addEventListener('click', () => $('#confirmDlg').close());
@@ -189,8 +231,7 @@ let fb = null;
 async function firebase() {
   if (fb) return fb;
   const [{ initializeApp }, fs] = await Promise.all([import(`${SDK}/firebase-app.js`), import(`${SDK}/firebase-firestore.js`)]);
-  const app = initializeApp(firebaseConfig);
-  fb = { ...fs, db: fs.getFirestore(app) };
+  fb = { ...fs, db: fs.getFirestore(initializeApp(firebaseConfig)) };
   return fb;
 }
 
@@ -209,26 +250,26 @@ $('#cSend').addEventListener('click', async () => {
     const { cupsN, price } = totals();
     const editKey = makeKey();
     const items = cups.map((c) => {
-      const it = byId[c.itemId];
-      return { itemId: it.id, name: it.name, cat: it.cat, size: c.size, sugar: c.sugar, ice: c.ice, toppings: c.toppings, qty: c.qty, unitPrice: unitPrice(c), note: c.note.trim() };
+      const it = ITEM_BY_ID[c.itemId];
+      return { itemId: it.id, name: it.name, cat: it.cat, size: c.size, sizeLabel: shop().sizeOf(c), variant: c.variant, sugar: c.sugar, ice: c.ice, toppings: c.toppings, qty: c.qty, unitPrice: unitPrice(c), note: c.note.trim() };
     });
     const ref = await addDoc(collection(db, 'orders'), {
-      name, items, totalCups: cupsN, totalPrice: price,
+      shop: shopId, name, items, totalCups: cupsN, totalPrice: price,
       note: $('#orderNote').value.trim(), status: 'active', paid: false, editKey, createdAt: serverTimestamp(),
     });
     store.set('presotea-name', name);
     const mine = store.get('presotea-mine', []);
-    mine.unshift({ id: ref.id, editKey, name, text: items.map((i) => `${i.name}×${i.qty}（${specText(i)}）`).join('、'), total: price, at: Date.now() });
+    mine.unshift({ id: ref.id, editKey, name, shop: SHOPS[shopId].brand, text: items.map((i) => `${i.name}×${i.qty}（${specText(i, shopId)}）`).join('、'), total: price, at: Date.now() });
     store.set('presotea-mine', mine.slice(0, 20));
     $('#confirmDlg').close();
-    $('#successText').textContent = `${name} 的 ${cupsN} 杯飲料（$${price}）已送出，負責人會統一訂購。`;
+    $('#successText').textContent = `${name} 的 ${SHOPS[shopId].brand} ${cupsN} 杯飲料（$${price}）已送出，負責人會統一訂購。`;
     $('#successCard').classList.remove('hidden');
     cups = []; $('#orderNote').value = '';
     renderMenu(); renderCart(); renderMine();
     $('#successCard').scrollIntoView({ behavior: 'smooth', block: 'center' });
   } catch (err) {
     console.error(err);
-    toast(err?.code === 'permission-denied' ? '送出失敗：點單可能已截止' : '送出失敗，請檢查網路後再試一次');
+    toast(err?.code === 'permission-denied' ? '送出失敗：點單可能已截止或已換店家，請重新整理' : '送出失敗，請檢查網路後再試一次');
   } finally {
     btn.disabled = false; btn.textContent = '送出訂單';
   }
@@ -244,7 +285,7 @@ $('#againBtn').addEventListener('click', () => {
 function renderMine() {
   const mine = store.get('presotea-mine', []);
   $('#mineCard').classList.toggle('hidden', !mine.length);
-  $('#mineList').innerHTML = mine.map((m) => `<li><div><strong>${esc(m.name)}</strong>・$${m.total}${m.cancelled ? '（已取消）' : ''}<small>${esc(m.text)}</small></div>
+  $('#mineList').innerHTML = mine.map((m) => `<li><div><strong>${esc(m.name)}</strong>・${esc(m.shop || '鮮茶道')}・$${m.total}${m.cancelled ? '（已取消）' : ''}<small>${esc(m.text)}</small></div>
     ${m.cancelled ? '' : `<button class="btn ghost sm" data-cancel="${esc(m.id)}">取消</button>`}</li>`).join('');
 }
 $('#mineList').addEventListener('click', async (e) => {
@@ -265,21 +306,25 @@ $('#mineList').addEventListener('click', async (e) => {
   }
 });
 
-// ---------- 開放狀態 ----------
+// ---------- 後台設定（開放狀態、店家） ----------
 async function watchSettings() {
   try {
     const { db, doc, onSnapshot } = await firebase();
     onSnapshot(doc(db, 'settings', 'main'), (snap) => {
       const s = snap.data() || {};
       isOpen = s.open !== false;
-      if (s.title) { $('#title').textContent = s.title; document.title = `${s.title}｜鮮茶道團購點單`; }
+      branches = s.branches || {};
+      shopMode = SHOPS[s.shopMode] || s.shopMode === 'both' ? s.shopMode : 'presotea';
+      if (shopMode !== 'both' && shopId !== shopMode) { shopId = shopMode; cups = []; }
+      pageTitle = s.title || '';
+      if (s.title) $('#title').textContent = s.title;
       if (s.note) $('#note').textContent = s.note;
       $('#status').className = `chip ${isOpen ? 'open' : 'closed'}`;
       $('#status').textContent = isOpen ? '🟢 開放點單中' : '⛔ 已截止';
       $('#deadline').classList.toggle('hidden', !s.deadline);
       $('#deadline').textContent = s.deadline ? `⏰ 截止：${s.deadline}` : '';
       $('#closedNotice').classList.toggle('hidden', isOpen);
-      renderCart();
+      applyShop();
     }, () => { $('#status').textContent = '⚠️ 無法連線'; });
   } catch {
     $('#status').textContent = '⚠️ 無法連線';
@@ -293,4 +338,5 @@ function toast(msg) {
   clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 2400);
 }
 
-renderCats(); renderMenu(); renderCart(); renderMine(); watchSettings();
+if (!SHOPS[shopId]) shopId = 'presotea';
+applyShop(); renderMine(); watchSettings();

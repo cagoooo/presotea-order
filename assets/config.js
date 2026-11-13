@@ -9,4 +9,4 @@ export const firebaseConfig = {
 };
 
 export const SDK = 'https://www.gstatic.com/firebasejs/11.10.0';
-export const VERSION = 'v1.0.0';
+export const VERSION = 'v1.1.0';

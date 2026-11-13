@@ -14,9 +14,17 @@ service cloud.firestore {
       return !exists(s) || get(s).data.open != false;
     }
 
+    // 後台設定 shopMode：presotea / tptea / both；沒設定時只開鮮茶道
+    function shopAllowed(shop) {
+      let s = /databases/$(database)/documents/settings/main;
+      let mode = exists(s) ? get(s).data.get('shopMode', 'presotea') : 'presotea';
+      return shop in ['presotea', 'tptea'] && (mode == 'both' || mode == shop);
+    }
+
     function validOrder(d) {
-      return d.keys().hasOnly(['name', 'items', 'totalCups', 'totalPrice', 'note', 'status', 'paid', 'editKey', 'createdAt'])
-        && d.keys().hasAll(['name', 'items', 'totalCups', 'totalPrice', 'note', 'status', 'paid', 'editKey', 'createdAt'])
+      return d.keys().hasOnly(['shop', 'name', 'items', 'totalCups', 'totalPrice', 'note', 'status', 'paid', 'editKey', 'createdAt'])
+        && d.keys().hasAll(['shop', 'name', 'items', 'totalCups', 'totalPrice', 'note', 'status', 'paid', 'editKey', 'createdAt'])
+        && shopAllowed(d.shop)
         && d.name is string && d.name.size() > 0 && d.name.size() <= 30
         && d.items is list && d.items.size() > 0 && d.items.size() <= 30
         && d.totalCups is int && d.totalCups > 0 && d.totalCups <= 200

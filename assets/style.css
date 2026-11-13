@@ -104,6 +104,11 @@ main { margin-top: -32px; position: relative; padding-bottom: 120px; }
   background: var(--danger-soft); color: var(--danger); font-weight: 700;
 }
 
+/* ---------- 店家切換 ---------- */
+.shop-switch { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 0 0 12px; padding: 4px; background: var(--surface-2); border-radius: 14px; }
+.shop-btn { padding: 12px 10px; border-radius: 11px; border: 0; background: transparent; font-weight: 800; font-size: var(--fs-md); color: var(--ink-2); }
+.shop-btn.active { background: var(--brand); color: #fff; box-shadow: 0 4px 12px rgba(0,0,0,.12); }
+
 /* ---------- 分類列 ---------- */
 .toolbar {
   position: sticky; top: 0; z-index: 20;
