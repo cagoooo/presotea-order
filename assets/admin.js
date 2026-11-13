@@ -26,7 +26,8 @@ $('#loginBtn').addEventListener('click', async () => {
   } catch (err) {
     console.error(err);
     if (err.code === 'auth/popup-blocked' || err.code === 'auth/operation-not-supported-in-this-environment') {
-      return A.signInWithRedirect(auth, new A.GoogleAuthProvider());
+      $('#loginMsg').textContent = '登入視窗被擋住了：請允許這個網站「彈出式視窗」後再按一次；若在 LINE 裡開啟，請改用 Chrome 或 Safari 開啟此網址。';
+      return;
     }
     if (err.code !== 'auth/popup-closed-by-user' && err.code !== 'auth/cancelled-popup-request') {
       $('#loginMsg').textContent = `登入失敗（${err.code || err.message}）。若在 LINE 裡開啟，請改用 Chrome 或 Safari。`;
