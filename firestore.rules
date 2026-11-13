@@ -23,8 +23,9 @@ service cloud.firestore {
 
     function validOrder(d) {
       return d.keys().hasOnly(['shop', 'name', 'items', 'totalCups', 'totalPrice', 'note', 'status', 'paid', 'editKey', 'createdAt'])
-        && d.keys().hasAll(['shop', 'name', 'items', 'totalCups', 'totalPrice', 'note', 'status', 'paid', 'editKey', 'createdAt'])
-        && shopAllowed(d.shop)
+        && d.keys().hasAll(['name', 'items', 'totalCups', 'totalPrice', 'note', 'status', 'paid', 'editKey', 'createdAt'])
+        // 還開著舊版頁面的人不會帶 shop，視為鮮茶道
+        && shopAllowed(d.get('shop', 'presotea'))
         && d.name is string && d.name.size() > 0 && d.name.size() <= 30
         && d.items is list && d.items.size() > 0 && d.items.size() <= 30
         && d.totalCups is int && d.totalCups > 0 && d.totalCups <= 200
